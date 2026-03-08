@@ -10,16 +10,42 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
         Loaded += SettingsWindow_Loaded;
+        Unloaded += SettingsWindow_Unloaded;
     }
 
     private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is ViewModels.MainViewModel vm)
         {
-            _isUpdatingPassword = true;
-            ApiPasswordBox.Password = vm.AiApiKey;
-            _isUpdatingPassword = false;
+            SyncPasswordBoxToVm(vm);
+            vm.PropertyChanged += Vm_PropertyChanged;
         }
+    }
+
+    private void SettingsWindow_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ViewModels.MainViewModel vm)
+        {
+            vm.PropertyChanged -= Vm_PropertyChanged;
+        }
+    }
+
+    private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ViewModels.MainViewModel.AiApiKey))
+        {
+            if (DataContext is ViewModels.MainViewModel vm)
+            {
+                SyncPasswordBoxToVm(vm);
+            }
+        }
+    }
+
+    private void SyncPasswordBoxToVm(ViewModels.MainViewModel vm)
+    {
+        _isUpdatingPassword = true;
+        ApiPasswordBox.Password = vm.AiApiKey;
+        _isUpdatingPassword = false;
     }
 
     private void ApiPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
