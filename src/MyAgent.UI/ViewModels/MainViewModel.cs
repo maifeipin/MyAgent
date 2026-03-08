@@ -85,6 +85,20 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    partial void OnAiBaseUrlChanged(string value) => SyncToSelectedProfile();
+    partial void OnAiModelNameChanged(string value) => SyncToSelectedProfile();
+    partial void OnAiApiKeyChanged(string value) => SyncToSelectedProfile();
+
+    private void SyncToSelectedProfile()
+    {
+        if (SelectedAiProfile != null)
+        {
+            SelectedAiProfile.BaseUrl = AiBaseUrl;
+            SelectedAiProfile.ModelName = AiModelName;
+            SelectedAiProfile.ApiKey = AiApiKey;
+        }
+    }
+
     // UI View State
     [ObservableProperty]
     private int _rightTabIndex = 0;
