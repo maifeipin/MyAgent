@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MyAgent.Core/MyAgent.Core.csproj" />
+    <Project Path="src/MyAgent.Host/MyAgent.Host.csproj" />
+    <Project Path="src/MyAgent.Skills/MyAgent.Skills.csproj" />
+    <Project Path="src/MyAgent.UI/MyAgent.UI.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>MyAgent WebSSH Terminal</title>
+    <!-- 引入 xterm.css 基础样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <!-- 引入 xterm.js 核心及常用插件 -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+    
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1e1e1e; /* 经典 VSCode 黑黑背景 */
+            overflow: hidden;
+        }
+        #terminal-container {
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal-container"></div>
+    <script>
+        // 初始化终端机
+        var term = new Terminal({
+            cursorBlink: true,
+            theme: {
+                background: '#1e1e1e',
+                foreground: '#d4d4d4'
+            },
+            fontFamily: 'Consolas, "Courier New", monospace',
+            fontSize: 14,
+            fontWeight: 'normal',
+            lineHeight: 1.2
+        });
+
+        // 挂载自动适配容器尺寸插件
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        
+        // 挂载超链接点击解析插件
+        term.loadAddon(new WebLinksAddon.WebLinksAddon());
+
+        // 绑定到前台 DOM
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+
+        // 绑定窗口自适应拉伸
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+            if (window.chrome && window.chrome.webview) {
+                // 通知 C# 后端调整 PTY 终端的行列宽度
+                window.chrome.webview.postMessage(JSON.stringify({
+                    type: "resize",
+                    cols: term.cols,
+                    rows: term.rows
+                }));
+            }
+        });
+
+        // 捕获用户在 xterm 界面的键盘敲击，然后通过 JS 互操作发给 C#，由 C# 写给 Linux ShellStream
+        term.onData(data => {
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(JSON.stringify({
+                    type: "input",
+                    data: data
+                }));
+            }
+        });
+
+        // C# 侧调用以接收服务器 PTY 回显打印到界面
+        function writeToTerminal(data) {
+            term.write(data);
+        }
+
+        // 初始化欢迎提示
+        term.write('\x1b[1;36m[MyAgent WebSSH Subsystem Client Initiated]\x1b[0m\r\n');
+        term.write('Connection standing by...\r\n');
+    </script>
+</body>
+</html>

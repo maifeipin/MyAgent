@@ -1,0 +1,32 @@
+# Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# MyAgent Specific
+backup/
+*user_config.json
+*.log
+build_*.txt
+msbuild.log
+*.raw.txt
+*.utf8.txt
+*.output.txt
+
+# .NET
+*.exe
+*.dll
+*.pdb
+*.nupkg
+
+# Node modules (if any for xterm.js bridge)
+node_modules/
+
+# OS Specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -1,0 +1,62 @@
+<Window x:Class="MyAgent.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="系统与模型设置 (Settings)" Height="600" Width="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <!-- 滚动区域占满剩余空间 -->
+            <RowDefinition Height="*"/>
+            <!-- 底部按钮区固定 -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="AI Provider Configuration" FontWeight="Bold" FontSize="16" Margin="0,0,0,10"/>
+
+                <GroupBox Header="快速预设加载 (可选)" Padding="10" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" ItemsSource="{Binding AiProfiles}" 
+                                  SelectedItem="{Binding SelectedAiProfile}" 
+                                  DisplayMemberPath="Name" Margin="0,0,10,0"/>
+
+                        <Button Grid.Column="1" Content="配置大管家" Click="OpenProfileManager_Click" Width="80" Background="#f0f0f0"/>
+                    </Grid>
+                </GroupBox>
+
+                <GroupBox Header="大模型网关参数 (自动保存)" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="Base Url (OpenAI Compatible) :" />
+                        <TextBox Text="{Binding AiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10"/>
+
+                        <TextBlock Text="Model Name :" />
+                        <TextBox Text="{Binding AiModelName, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,10"/>
+
+                        <TextBlock Text="API Key (Bearer Token) :" />
+                        <PasswordBox x:Name="ApiPasswordBox" PasswordChanged="ApiPasswordBox_PasswordChanged" Margin="0,5,0,10" />
+
+                        <TextBlock Text="Webhook 触达通知 URL (企微/飞书/钉钉) [选填] :" Margin="0,10,0,0"/>
+                        <TextBox Text="{Binding WebhookUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,5,0,5"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="🌐 全局网络代理及穿墙通道 (Socks5/Http)" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <CheckBox Content="开启全局网络层接管 (含浏览器子核)" 
+                                  IsChecked="{Binding EnableGlobalProxy}" FontWeight="Bold" Foreground="#D84315" Margin="0,5,0,10"/>
+                        <TextBlock Text="代理地址 (例如 socks5://127.0.0.1:1080) :" />
+                        <TextBox Text="{Binding GlobalProxyAddress, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding EnableGlobalProxy}" Margin="0,5,0,5"/>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button Grid.Row="1" Content="关闭完成" IsDefault="True" Click="CloseButton_Click" Height="38" FontSize="14" FontWeight="Bold" Background="#0275d8" Foreground="White" BorderThickness="0" Cursor="Hand" />
+    </Grid>
+</Window>
