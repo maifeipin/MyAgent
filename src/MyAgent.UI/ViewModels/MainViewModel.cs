@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -42,6 +43,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (value != null)
         {
+            LoadSkillDefaultParams();
             SaveConfig();
         }
     }
@@ -74,14 +76,19 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private AiProfile? _selectedAiProfile;
+    
+    private bool _isLoadingProfile = false;
 
     partial void OnSelectedAiProfileChanged(AiProfile? value)
     {
-        if (value != null)
+        if (value != null && !_isLoadingProfile)
         {
+            _isLoadingProfile = true;
             AiBaseUrl = value.BaseUrl;
             AiModelName = value.ModelName;
             AiApiKey = value.ApiKey;
+            _isLoadingProfile = false;
+            SaveConfig();
         }
     }
 
@@ -91,7 +98,7 @@ public partial class MainViewModel : ObservableObject
 
     private void SyncToSelectedProfile()
     {
-        if (SelectedAiProfile != null)
+        if (SelectedAiProfile != null && !_isLoadingProfile)
         {
             SelectedAiProfile.BaseUrl = AiBaseUrl;
             SelectedAiProfile.ModelName = AiModelName;
@@ -117,6 +124,12 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _executionLogText = "Ready.\n";
+
+    [ObservableProperty]
+    private bool _isExecuting = false;
+    
+    [ObservableProperty]
+    private int _globalTimeoutSeconds = 300;
 
     // VPS Console States
     [ObservableProperty]
@@ -201,6 +214,19 @@ public partial class MainViewModel : ObservableObject
                 var config = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.Dictionary<string, string>>(json);
                 if (config != null)
                 {
+                    // Load full profile list if available FIRST
+                    if (config.TryGetValue("AiProfilesJson", out var profilesJson))
+                    {
+                        var loadedProfiles = Newtonsoft.Json.JsonConvert.DeserializeObject<ObservableCollection<AiProfile>>(profilesJson);
+                        if (loadedProfiles != null)
+                        {
+                            AiProfiles.Clear();
+                            foreach (var p in loadedProfiles) AiProfiles.Add(p);
+                        }
+                    }
+                    
+                    _isLoadingProfile = true;
+                    
                     if (config.TryGetValue("AiBaseUrl", out var url)) AiBaseUrl = url;
                     if (config.TryGetValue("AiModelName", out var model)) AiModelName = model;
                     if (config.TryGetValue("AiApiKey", out var key)) AiApiKey = key;
@@ -219,23 +245,41 @@ public partial class MainViewModel : ObservableObject
                         EnableGlobalProxy = enableProxy;
                     }
                     if (config.TryGetValue("GlobalProxyAddress", out var proxyAddr)) GlobalProxyAddress = proxyAddr;
+                    
+                    if (config.TryGetValue("GlobalTimeoutSeconds", out var timeoutStr) && int.TryParse(timeoutStr, out var timeout))
+                    {
+                        GlobalTimeoutSeconds = timeout;
+                    }
+                    
+                    if (config.TryGetValue("ExecutionLogText", out var logText))
+                    {
+                        ExecutionLogText = logText;
+                    }
+                    
+                    if (config.TryGetValue("VpsLogText", out var vpsLog))
+                    {
+                        VpsLogText = vpsLog;
+                    }
 
                     if (config.TryGetValue("LastSelectedSkillId", out var skillId))
                     {
                         _lastSelectedSkillId = skillId;
                     }
-
-                    // Load full profile list if available
-                    if (config.TryGetValue("AiProfilesJson", out var profilesJson))
+                    
+                    if (config.TryGetValue("SelectedAiProfileName", out var selectedProfileName))
                     {
-                        var loadedProfiles = Newtonsoft.Json.JsonConvert.DeserializeObject<ObservableCollection<AiProfile>>(profilesJson);
-                        if (loadedProfiles != null)
-                        {
-                            AiProfiles.Clear();
-                            foreach (var p in loadedProfiles) AiProfiles.Add(p);
-                        }
+                        SelectedAiProfile = AiProfiles.FirstOrDefault(p => p.Name == selectedProfileName);
                     }
+                    
+                    _isLoadingProfile = false;
                 }
+            }
+            
+            if (SelectedAiProfile == null && AiProfiles.Count > 0)
+            {
+                _isLoadingProfile = true;
+                SelectedAiProfile = AiProfiles[0];
+                _isLoadingProfile = false;
             }
         }
         catch { /* ignore */ }
@@ -247,6 +291,14 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            // 限制日志长度，避免配置文件过大
+            string trimmedExecutionLog = ExecutionLogText.Length > 5000 
+                ? ExecutionLogText.Substring(ExecutionLogText.Length - 5000) 
+                : ExecutionLogText;
+            string trimmedVpsLog = VpsLogText.Length > 5000 
+                ? VpsLogText.Substring(VpsLogText.Length - 5000) 
+                : VpsLogText;
+            
             var config = new System.Collections.Generic.Dictionary<string, string>
             {
                 ["AiBaseUrl"] = AiBaseUrl,
@@ -256,10 +308,14 @@ public partial class MainViewModel : ObservableObject
                 ["EnableWebhookPush"] = EnableWebhookPush.ToString(),
                 ["EnableGlobalProxy"] = EnableGlobalProxy.ToString(),
                 ["GlobalProxyAddress"] = GlobalProxyAddress,
+                ["GlobalTimeoutSeconds"] = GlobalTimeoutSeconds.ToString(),
                 ["ParamTargetUrl"] = ParamTargetUrl,
                 ["ParamPrompt"] = ParamPrompt,
+                ["ExecutionLogText"] = trimmedExecutionLog,
+                ["VpsLogText"] = trimmedVpsLog,
                 ["LastSelectedSkillId"] = SelectedSkill?.SkillId ?? "",
-                ["AiProfilesJson"] = Newtonsoft.Json.JsonConvert.SerializeObject(AiProfiles)
+                ["AiProfilesJson"] = Newtonsoft.Json.JsonConvert.SerializeObject(AiProfiles),
+                ["SelectedAiProfileName"] = SelectedAiProfile?.Name ?? ""
             };
             File.WriteAllText(GetConfigFilePath(), Newtonsoft.Json.JsonConvert.SerializeObject(config, Newtonsoft.Json.Formatting.Indented));
             
@@ -290,6 +346,57 @@ public partial class MainViewModel : ObservableObject
         catch 
         {
             LogMessage("⚠️ 全局网络代理规则注入系统失败。请检查地址格式 (支持 http:// 或 socks5://)。");
+        }
+    }
+    
+    private void LoadSkillDefaultParams()
+    {
+        if (SelectedSkill == null) return;
+        
+        // 根据技能类型智能预填充参数
+        switch (SelectedSkill.SkillId)
+        {
+            case "sample.web_reader":
+                if (string.IsNullOrWhiteSpace(ParamTargetUrl) || ParamTargetUrl == "https://github.com/trending")
+                {
+                    ParamTargetUrl = "https://github.com/trending";
+                }
+                if (string.IsNullOrWhiteSpace(ParamPrompt) || ParamPrompt.Contains("总结"))
+                {
+                    ParamPrompt = "请总结当前网页的内容";
+                }
+                break;
+                
+            case "ai.chat":
+                ParamTargetUrl = "";
+                if (string.IsNullOrWhiteSpace(ParamPrompt))
+                {
+                    ParamPrompt = "你好，请问有什么可以帮助你的？";
+                }
+                break;
+                
+            case "system.diagnose":
+                ParamTargetUrl = "";
+                if (string.IsNullOrWhiteSpace(ParamPrompt))
+                {
+                    ParamPrompt = "请描述您遇到的问题或粘贴错误日志...";
+                }
+                break;
+                
+            case "system.evolve":
+                ParamTargetUrl = "";
+                if (string.IsNullOrWhiteSpace(ParamPrompt))
+                {
+                    ParamPrompt = "请描述您想要添加的新功能或技能...";
+                }
+                break;
+                
+            case "system.devops":
+                if (string.IsNullOrWhiteSpace(ParamPrompt))
+                {
+                    ParamPrompt = "请描述您的服务器运维需求（如：安装 Docker、部署 Node.js 应用等）...";
+                }
+                break;
         }
     }
 
@@ -381,8 +488,12 @@ public partial class MainViewModel : ObservableObject
 
         _executionCts?.Cancel();
         _executionCts = new CancellationTokenSource();
+        IsExecuting = true;
+        
+        _executionCts.CancelAfter(TimeSpan.FromSeconds(GlobalTimeoutSeconds));
 
         LogMessage($"\n--- Starting Execution: {SelectedSkill.Name} ---");
+        LogMessage($"⏱️ 全局超时设置: {GlobalTimeoutSeconds} 秒");
 
         // Determine final AI settings
         string finalApiKey = AiApiKey;
@@ -498,6 +609,17 @@ public partial class MainViewModel : ObservableObject
         {
             LogMessage($"Exception: {ex.Message}");
         }
+        finally
+        {
+            IsExecuting = false;
+        }
+    }
+    
+    [RelayCommand]
+    private void CancelExecution()
+    {
+        _executionCts?.Cancel();
+        LogMessage("⚠️ 用户请求取消执行...");
     }
 
     public void LogMessage(string message)
@@ -594,7 +716,7 @@ workflow:
     params:
       prompt: |
         【系统级指令】你现在是 MyAgent 自动化桌面级系统的一名资深支持专家架构师。
-        用户正在抱怨他的自动化流程或者环境遇到了一些问题。请仔细分析下面的用户环境状态变量和用户的描述，给出结构化、高可用的诊断报告与解决方案：
+        用户正在抱怨他的自动化流程或者环境遇到了些问题。请仔细分析下面的用户环境状态变量和用户的描述，给出结构化、高可用的诊断报告与解决方案：
 
         ### [当前环境配置]
         1. BaseUrl 网关：{{StateBag.AiBaseUrl}}
@@ -747,6 +869,42 @@ workflow:
     timeout_ms: 120000
 ";
             File.WriteAllText(devopsFile, yaml4.Trim());
+        }
+        
+        var chatFile = Path.Combine(configDir, "ai_chat.yaml");
+        if (!File.Exists(chatFile))
+        {
+            string yamlChat = @"
+schema_version: '1.1'
+skill_id: 'ai.chat'
+name: '通用 AI 对话助手'
+description: '直接与 AI 模型对话，无需浏览器或其他工具，适合快速问答、文本生成、翻译等任务。'
+trigger:
+  type: 'manual'
+workflow:
+  - step_id: 'ai_chat_step'
+    name: '直接对话'
+    action: 'ai.analyze'
+    params:
+      prompt: '{{StateBag.UserPrompt}}'
+    timeout_ms: 120000
+
+  - step_id: 'notify_webhook'
+    name: '推送结果到 Webhook'
+    action: 'notify.webhook'
+    params:
+      enabled: '{{StateBag.EnableWebhookPush}}'
+      url: '{{StateBag.WebhookUrl}}'
+      payload: |
+        {
+           ""msgtype"": ""markdown"",
+           ""markdown"": {
+               ""content"": {{StateBag.analysis_text|json}}
+           }
+        }
+    timeout_ms: 8000
+";
+            File.WriteAllText(chatFile, yamlChat.Trim());
         }
     }
 }

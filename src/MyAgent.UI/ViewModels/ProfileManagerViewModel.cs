@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -45,6 +46,16 @@ public partial class ProfileManagerViewModel : ObservableObject
                 ModelName = profile.ModelName,
                 ApiKey = profile.ApiKey
             });
+        }
+        
+        // Set default selection to match MainViewModel's current selection
+        if (_mainViewModel.SelectedAiProfile != null)
+        {
+            SelectedEditableProfile = AiProfiles.FirstOrDefault(p => p.Name == _mainViewModel.SelectedAiProfile.Name);
+        }
+        else if (AiProfiles.Count > 0)
+        {
+            SelectedEditableProfile = AiProfiles[0];
         }
     }
 
@@ -127,7 +138,6 @@ public partial class ProfileManagerViewModel : ObservableObject
     [RelayCommand]
     private void SaveProfiles(Window window)
     {
-        // sync back to MainViewModel
         _mainViewModel.AiProfiles.Clear();
         foreach (var p in AiProfiles)
         {

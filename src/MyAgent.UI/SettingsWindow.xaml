@@ -54,6 +54,16 @@
                         <TextBox Text="{Binding GlobalProxyAddress, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding EnableGlobalProxy}" Margin="0,5,0,5"/>
                     </StackPanel>
                 </GroupBox>
+                
+                <GroupBox Header="⏱️ 全局执行超时控制" Padding="10" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="技能执行全局超时时间 (秒)：" Margin="0,0,0,5"/>
+                        <TextBlock Text="设置每个技能执行的最大时长，超时后自动取消以防止长时间挂起。" 
+                                   FontSize="11" Foreground="Gray" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <TextBox Text="{Binding GlobalTimeoutSeconds, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,5"/>
+                        <TextBlock Text="建议值：300 秒（5分钟）" FontSize="11" Foreground="Gray"/>
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
         </ScrollViewer>
 

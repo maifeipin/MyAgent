@@ -60,6 +60,10 @@ public partial class SettingsWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
+        if (DataContext is ViewModels.MainViewModel vm)
+        {
+            vm.SaveConfig();
+        }
         Close();
     }
 
