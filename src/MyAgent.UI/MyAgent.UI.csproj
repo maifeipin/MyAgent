@@ -23,7 +23,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\app-icon.ico" />
+    <None Include="Resources\app-icon.svg" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Update="Resources\ssh_terminal.html">

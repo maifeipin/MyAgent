@@ -3,12 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="MyAgent - 混合双打自律系统" Height="800" Width="1200"
+        Icon="pack://application:,,,/Resources/app-icon.ico"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized">
     <Grid>
         <Grid.ColumnDefinitions>
             <!-- 左侧交互与配置区 -->
-            <ColumnDefinition Width="420" MinWidth="350" />
+            <ColumnDefinition Width="460" MinWidth="350" />
             <ColumnDefinition Width="5" />
             
             <!-- 右侧浏览器预览区 -->
@@ -124,7 +125,10 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="无头浏览器 DOM 与行为轨迹监控窗" FontWeight="Bold" Margin="0,5,0,10" Foreground="Gray" />
+                        <DockPanel Margin="0,5,0,10" LastChildFill="False">
+                            <TextBlock Text="无头浏览器 DOM 与行为轨迹监控窗" FontWeight="Bold" Foreground="Gray" VerticalAlignment="Center" />
+                            <CheckBox Content="🌙 暗色" IsChecked="{Binding UseDarkWebMode, Mode=TwoWay}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        </DockPanel>
                         <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1">
                             <wv2:WebView2 x:Name="MainWebView" DefaultBackgroundColor="White" />
                         </Border>
@@ -141,7 +145,10 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="技能归纳与结构化富文本结晶" FontWeight="Bold" Margin="0,5,0,10" Foreground="Gray" />
+                        <DockPanel Margin="0,5,0,10" LastChildFill="False">
+                            <TextBlock Text="技能归纳与结构化富文本结晶" FontWeight="Bold" Foreground="Gray" VerticalAlignment="Center" />
+                            <CheckBox Content="🌙 暗色" IsChecked="{Binding UseDarkWebMode, Mode=TwoWay}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                        </DockPanel>
                         <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1">
                             <wv2:WebView2 x:Name="MarkdownReportWebView" DefaultBackgroundColor="#FAFAFA" />
                         </Border>

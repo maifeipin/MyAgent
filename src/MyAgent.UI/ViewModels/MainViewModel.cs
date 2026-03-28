@@ -33,6 +33,14 @@ public partial class MainViewModel : ObservableObject
     private readonly SkillEngine _engine;
     private readonly ILogger<MainViewModel> _logger;
 
+    [ObservableProperty]
+    private bool _useDarkWebMode = false;
+
+    partial void OnUseDarkWebModeChanged(bool value)
+    {
+        SaveConfig();
+    }
+
     public ObservableCollection<SkillDefinition> Skills { get; } = new();
 
     [ObservableProperty]
@@ -261,6 +269,11 @@ public partial class MainViewModel : ObservableObject
                         VpsLogText = vpsLog;
                     }
 
+                    if (config.TryGetValue("UseDarkWebMode", out var useDarkModeStr) && bool.TryParse(useDarkModeStr, out var useDarkMode))
+                    {
+                        UseDarkWebMode = useDarkMode;
+                    }
+
                     if (config.TryGetValue("LastSelectedSkillId", out var skillId))
                     {
                         _lastSelectedSkillId = skillId;
@@ -313,6 +326,7 @@ public partial class MainViewModel : ObservableObject
                 ["ParamPrompt"] = ParamPrompt,
                 ["ExecutionLogText"] = trimmedExecutionLog,
                 ["VpsLogText"] = trimmedVpsLog,
+                ["UseDarkWebMode"] = UseDarkWebMode.ToString(),
                 ["LastSelectedSkillId"] = SelectedSkill?.SkillId ?? "",
                 ["AiProfilesJson"] = Newtonsoft.Json.JsonConvert.SerializeObject(AiProfiles),
                 ["SelectedAiProfileName"] = SelectedAiProfile?.Name ?? ""

@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Threading.Tasks;
+using System.ComponentModel;
 using Microsoft.Web.WebView2.Core;
 using MyAgent.UI.ViewModels;
 
@@ -47,6 +48,8 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = _viewModel;
 
+        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+
         // Initialize WebView2 environment as soon as the window is created
         InitializeWebViewAsync();
 
@@ -65,6 +68,69 @@ public partial class MainWindow : Window
                 MarkdownReportWebView.NavigateToString(html);
             });
         };
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.UseDarkWebMode))
+        {
+            _ = Dispatcher.InvokeAsync(async () => await ApplyWebThemeAsync());
+        }
+    }
+
+    private async Task ApplyWebThemeAsync()
+    {
+        var scheme = _viewModel.UseDarkWebMode
+            ? CoreWebView2PreferredColorScheme.Dark
+            : CoreWebView2PreferredColorScheme.Light;
+
+        if (MainWebView.CoreWebView2 != null)
+        {
+            MainWebView.CoreWebView2.Profile.PreferredColorScheme = scheme;
+        }
+
+        if (MarkdownReportWebView.CoreWebView2 != null)
+        {
+            MarkdownReportWebView.CoreWebView2.Profile.PreferredColorScheme = scheme;
+
+            var script = _viewModel.UseDarkWebMode
+                ? @"(function(){
+                    document.documentElement.style.colorScheme = 'dark';
+                    const styleId='myagent-report-theme';
+                    let style=document.getElementById(styleId);
+                    if(!style){style=document.createElement('style');style.id=styleId;document.head.appendChild(style);} 
+                    style.textContent = `
+                        body { background:#121212 !important; color:#E8E8E8 !important; }
+                        h1,h2,h3 { color:#FFFFFF !important; border-bottom-color:#333 !important; }
+                        pre { background:#1E1E1E !important; color:#E8E8E8 !important; }
+                        code { background:#2A2A2A !important; color:#E8E8E8 !important; }
+                        blockquote { color:#BDBDBD !important; border-left-color:#5DA9FF !important; }
+                        a { color:#7CB7FF !important; }
+                    `;
+                })();"
+                : @"(function(){
+                    document.documentElement.style.colorScheme = 'light';
+                    const styleId='myagent-report-theme';
+                    let style=document.getElementById(styleId);
+                    if(!style){style=document.createElement('style');style.id=styleId;document.head.appendChild(style);} 
+                    style.textContent = `
+                        body { background:#FFFFFF !important; color:#333333 !important; }
+                        h1,h2,h3 { color:#2c3e50 !important; border-bottom-color:#eee !important; }
+                        pre { background:#f8f9fa !important; color:#333333 !important; }
+                        code { background:#f1f3f5 !important; color:#333333 !important; }
+                        blockquote { color:#6c757d !important; border-left-color:#007bff !important; }
+                        a { color:#0d6efd !important; }
+                    `;
+                })();";
+
+            try
+            {
+                await MarkdownReportWebView.ExecuteScriptAsync(script);
+            }
+            catch
+            {
+            }
+        }
     }
 
     private async void InitializeWebViewAsync()
@@ -92,6 +158,15 @@ public partial class MainWindow : Window
 
             var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
             await MainWebView.EnsureCoreWebView2Async(env);
+            await MarkdownReportWebView.EnsureCoreWebView2Async(env);
+
+            MarkdownReportWebView.NavigationCompleted += async (s, e) =>
+            {
+                if (e.IsSuccess)
+                {
+                    await ApplyWebThemeAsync();
+                }
+            };
             
             // 绑定生命周期系统钩子，交由 ViewModel 提供状态栏回显
             MainWebView.NavigationStarting += (s, e) => 
@@ -126,6 +201,7 @@ public partial class MainWindow : Window
                 _viewModel.RegisterVpsTerminal(this);
             }
             
+            await ApplyWebThemeAsync();
             _viewModel.LogMessage("WebView2 subsystem initialized.");
         }
         catch (Exception ex)
